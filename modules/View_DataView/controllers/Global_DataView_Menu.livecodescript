@@ -141,6 +141,8 @@ end menu_CanDrag
 on menu_RefreshDataView dView
    dispatch "ResetView" to dView
    dispatch "RenderView" to dView
+   --
+   set the behavior_Objects of dView to the behavior_Objects of dView -- no idea why
 end menu_RefreshDataView
 
 on _

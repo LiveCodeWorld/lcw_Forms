@@ -25,12 +25,29 @@ end menu_Target
 
 --> Global | Image | Menu
 -
-on menu_TestImageRect viewObject
-   set the image_Rect of viewObject to the rect of viewObject
-end menu_TestImageRect
+on menu_ChooseImage mTarget
+   answer file "Select an image..."
+   if it is empty then exit to top
+   
+   set the image_File of mTarget to it
+   set the image_ResizeQuality of mTarget to "best"
+end menu_ChooseImage
+
+on menu_ClearImage mTarget
+   set the show_Image of mTarget to false
+   set the image_Contents of mTarget to empty
+end menu_ClearImage
 
 on _
 end _
+
+on submenu_Image
+   return "Global | Image | Menu"
+end submenu_Image
+
+on submenu_Masked
+   return "Global | Image | Masked | Menu"
+end submenu_Masked
 
 on submenu_Dev
    return "Dev | Menu"
@@ -39,10 +56,6 @@ end submenu_Dev
 
 --> Dev | Menu
 -
-on menu_Experiment displayView
-   put displayView
-end menu_Experiment
-
-
---> Deps
--
+on _TestImageRect viewObject
+   set the image_Rect of viewObject to the rect of viewObject
+end _TestImageRect

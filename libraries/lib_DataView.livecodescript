@@ -12,6 +12,71 @@ version: 0.1
 
 --> Working on
 -
+function dv_ListRowViewTemplates pStackNames
+   if pStackNames is empty then put the openStacks into pStackNames
+   repeat for each line stackName in pStackNames
+      if exists (control 1 of stack stackName) then
+         put the dvRowControl of control 1 of stack stackName into rowView
+         if exists (rowView) then
+            put stackName & CR after rowViewStackNames
+         end if
+      end if
+   end repeat
+   delete char -1 of rowViewStackNames
+   return rowViewStackNames
+end dv_ListRowViewTemplates
+   
+function dv_ListStackNames pStackNames
+   if pStackNames is empty then put the openStacks into pStackNames
+   repeat for each line stackName in pStackNames
+      if exists (control 1 of stack stackName) then
+         put the dvControl of control 1 of stack stackName into dView
+         if exists (dView) then
+            put stackName & CR after dvStackNames
+         end if
+      end if
+   end repeat
+   return dvStackNames
+end dv_ListStackNames
+
+function dv_FilterByStyle dData, rowStyle
+   local fData
+   dv_AddFiltered fData, rowStyle, dData
+   return fData
+end dv_FilterByStyle
+
+command dv_AddFiltered @fData, rowStyle, dData, pNewItemNum
+   if pNewItemNum is not a number then put 1 into pNewItemNum
+   repeat with itemNum = 1 to item 2 of the extents of dData
+      put dData [itemNum] into rowData
+      if rowData ["@style"] is rowStyle then
+         put rowData into fData [pNewItemNum]
+         add 1 to pNewItemNum
+      end if
+   end repeat
+end dv_AddFiltered
+
+command dv_InsertNewRows @dData, newIData
+   -- at top only for now.
+   put newIData into nData [1]
+   --
+   put item 2 of the extents of nData + 1 into newRowNum
+   repeat with itemNum = 1 to item 2 of the extents of dData
+      put dData [itemNum] into rowData
+      put rowData into nData [newRowNum]
+      add 1 to newRowNum
+   end repeat
+   put nData into dData
+end dv_InsertNewRows
+
+command display_DvRowStyleArray dView
+   put the dv_RowStyleArray of dView into styleArray
+   --
+   display_Data styleArray, the short name of dView, "Row Style Array"
+   put the result into displayView
+   return displayView
+end display_DvRowStyleArray
+
 
 --> Props
 -
@@ -46,85 +111,185 @@ setprop dv_Wikidomain [pSlug] wikiDomain
    return storyData
 end dv_Wikidomain
 
-getprop dv_LinkedRowStack
-   put the dvControl of the target into dView
-   if exists (dView) is false then return empty
-   
-   put the dv_MetadataObject of dView into metadataObject
-   put the uLCW ["dv_LinkedRowStack"] of metadataObject into stackName
-   return stackName
-end dv_LinkedRowStack
 
-setprop dv_LinkedRowStack stackName
-   if exists (stack stackName) is false then return "error, stack does not exists:" && stackName
-   put the dvControl of the target into dView
-   if exists (dView) is false then return empty
-   
-   put the short name of stack stackName into stackName -- could be a path
-   --
-   put the dv_MetadataObject of dView into metadataObject
-   set the uLCW ["dv_LinkedRowStack"] of metadataObject to stackName
-   --
-   set the stackFile_Link of dView to stackName
-   return metadataObject
-end dv_LinkedRowStack
-   
-getprop dv_LinkedDataView
-   put the dv_MetadataObject of the target into metadataObject
-   put the uLCW ["dv_LinkedDataView"] of metadataObject into dView
-   return dView
-end dv_LinkedDataView
-
-setprop dv_LinkedDataView dView
-   -- set this for a card, button or dataview to link menus or other tools to a specific instance
-   if exists (dView) is false then return "error, dView does not exists:" && dView
-   put revRuggedID (dView) into dView
-   
-   put the dv_MetadataObject of the target into metadataObject
-   set the uLCW ["dv_LinkedDataView"] of metadataObject to dView
-   return metadataObject
-end dv_LinkedDataView
-
-getprop dv_Metadata [someKey]
-   put the dv_MetadataObject of the target into metadataObject
-   --
-   put the uLCW ["dv_Metadata"] of metadataObject into dvMetadata
-   if someKey is empty then
-      return dvMetadata
-   else
-      return dvMetadata [someKey]
-   end if
-end dv_Metadata
-
-setprop dv_Metadata [someKey] someValue
-   put the dv_MetadataObject of the target into metadataObject
-   --
-   if someKey is empty then
-      set the uLCW ["dv_Metadata"] of metadataObject to someValue
-   else
-      put the uLCW ["dv_Metadata"] of metadataObject into dvMetadata
-      put someValue into dvMetadata [someKey]
-      set the uLCW ["dv_Metadata"] of metadataObject to dvMetadata
-   end if
-end dv_Metadata
-
-getprop dv_MetadataObject
-   -- makes it easy to reference a standard local place to store metadata for a dv 
-   put the long id of the target into tObject
-   
-   put the dvControl of tObject into dView
-   if exists (dView) then return dView
-   
-   put the display_View of tObject into displayView
-   if exists (displayView) then return displayView
-   
-   put the card_Object of tObject into cObject
-   return cObject
-end dv_MetadataObject
-
-
---> Levure
+--> DataView | Row
 -
+getprop dv_RowNum
+   put the dvRowControl of the target into rowView
+   if exists (rowView) is false then return empty
+   --
+   put the dvRow of rowView into rowNum
+   return rowNum
+end dv_RowNum
+
+getprop dv_RowData
+   put the dvRowControl of the target into rowView
+   if exists (rowView) is false then return empty
+   put the dvRow of rowView into rowNum
+   --
+   -- put the dvData of rowView into dData
+   -- put dData [rowNum] into rowData
+   put the dvRowData [rowNum] of rowView into rowData
+   return rowData
+end dv_RowData
+
+setprop dv_RowData [rowType] rowData
+   put the dvRowControl of the target into rowView
+   if exists (rowView) is false then return empty
+   put the dvRow of rowView into rowNum
+   --
+   if rowType is not empty then put rowType into rowData ["@style"]
+   --
+   put the dvData of me into dData
+   put rowData into dData [rowNum]
+   set the dvData of me to dData
+   --
+   return dData
+end dv_RowData
+
+getprop dv_RowValue [someKey]
+   put the dv_RowData of the target into rowData
+   return rowData [someKey]
+end dv_RowValue
+
+setprop dv_RowValue [someKey] someValue
+   put the dvRowControl of the target into rowView
+   if exists (rowView) is false then return empty
+   --
+   put the dvData of rowView into dData
+   put the dvRow of rowView into rowNum
+   --
+   put someValue into dData [rowNum][someKey]
+   set the dvData of rowView to dData
+   --
+   return dData
+end dv_RowValue
+
+
+--> DataView | RowTemplate
+-
+getprop dv_RowTemplateName [rowStyleName]
+   put the dv_RowTemplate [rowStyleName] of the target into templateObject
+   if exists (templateObject) is false then return empty
+   
+   put the view_Name of templateObject into viewName
+   return viewName
+end dv_RowTemplateName
+
+setprop dv_RowTemplateName [rowStyleName] viewName
+   put view_GetTemplateObject (viewName) into templateObject
+   if exists (templateObject) is false then return empty
+   
+   set the dv_RowTemplate [rowStyleName] of the target to templateObject
+   return the result
+end dv_RowTemplateName
+
+getprop dv_MulipleHilites
+   put the dvControl of the target into dView
+   if exists (dView) is false then return empty
+   --
+   put the viewProp ["multiple lines"] of dView into someBoolean
+   return someBoolean
+end dv_MulipleHilites
+
+setprop dv_MulipleHilites someBoolean
+   put the dvControl of the target into dView
+   if exists (dView) is false then return empty
+   --
+   set the viewProp ["multiple lines"] of dView to someBoolean
+end dv_MulipleHilites
+
+getprop dv_RowTemplate [rowStyleName]
+   put the dvControl of the target into dView
+   if exists (dView) is false then return empty
+   --
+   put the viewProp ["row style templates"] of dView into dvRowStyleArray
+   put dvRowStyleArray [rowStyleName] into templateObject
+   return templateObject
+end dv_RowTemplate
+
+setprop dv_RowTemplate [rowStyleName] templateObject
+   put the dvControl of the target into dView
+   if exists (dView) is false then return "error, not a DataView"
+   --
+   if exists (templateObject) is false then
+      return "error, rowTemplate does not exist"
+   else
+      put revRuggedId (templateObject) into templateObject
+   end if
+   --
+   put the viewProp ["row style templates"] of dView into dvRowStyleArray
+   put templateObject into dvRowStyleArray [rowStyleName]
+   set the viewProp ["row style templates"] of dView to dvRowStyleArray
+   
+   -- make sure it si in the stackfile
+   set the stackFile_LinkObject of dView to templateObject
+   --
+   return dvRowStyleArray
+end dv_RowTemplate
+
+getprop dv_RowBehavior [rowNum]
+   if rowNum is empty then put the dvClickRow of target into rowNum
+   
+   put the dvRowData [rowNum] of the target into rowData
+   --
+   put rowData ["@style"] into rowStyle
+   put the dv_RowStyleArray of target into rowStyleArray
+   put rowStyleArray [rowStyle] into rowBehavior
+   return rowBehavior
+end dv_RowBehavior
+
+
+--> DataView | Row | Style
+-
+getprop dv_RowStyle
+   put the dv_RowValue ["@style"] of the target into rowType
+   return rowType
+end dv_RowStyle
+
+setprop dv_RowStyle rowType
+   put the dvRowControl of the target into rowView
+   if exists (rowView) is false then return empty
+   --
+   put the dvRow of rowView into rowNum
+   
+   put the dvData of me into dData
+   put rowType into dData [rowNum]["@style"]
+   set the dvData of me to dData
+   --
+   return dData
+end dv_RowStyle
+
+getprop dv_RowStyleNames
+   put the dv_RowStyleArray of the target into dvRowStyleArray
+   put keys (dvRowStyleArray) into styleNames
+   return styleNames
+end dv_RowStyleNames
+
+getprop dv_RowStyleArray
+   put the dvControl of the target into dView
+   if exists (dView) is false then return empty
+   --
+   put the viewProp ["row style templates"] of dView into dvRowStyleArray
+   return dvRowStyleArray
+end dv_RowStyleArray
+
+setprop dv_RowStyleArray [rowName] someValue
+   put the dvControl of the target into dView
+   if exists (dView) is false then return empty
+   --
+   switch
+      case rowName is empty and someValue is an array
+         set the viewProp ["row style templates"] of dView to someValue
+         break
+      case rowName is not empty and someValue is not an array
+         set the dv_RowTemplate [rowName] of dView to someValue
+         break
+      default
+         breakpoint
+   end switch
+end dv_RowStyleArray
+
 getprop dv_Controls
    put the long id of the target into tObject
    switch word 1 of tObject
@@ -167,6 +332,46 @@ getprop dv_ControlsWithin
 end dv_ControlsWithin
 
 
+--> DataVieew | Metadata
+-
+getprop dv_Metadata [someKey]
+   put the dv_MetadataObject of the target into metadataObject
+   --
+   put the uLCW ["dv_Metadata"] of metadataObject into dvMetadata
+   if someKey is empty then
+      return dvMetadata
+   else
+      return dvMetadata [someKey]
+   end if
+end dv_Metadata
+
+setprop dv_Metadata [someKey] someValue
+   put the dv_MetadataObject of the target into metadataObject
+   --
+   if someKey is empty then
+      set the uLCW ["dv_Metadata"] of metadataObject to someValue
+   else
+      put the uLCW ["dv_Metadata"] of metadataObject into dvMetadata
+      put someValue into dvMetadata [someKey]
+      set the uLCW ["dv_Metadata"] of metadataObject to dvMetadata
+   end if
+end dv_Metadata
+
+getprop dv_MetadataObject
+   -- makes it easy to reference a standard local place to store metadata for a dv 
+   put the long id of the target into tObject
+   
+   put the dvControl of tObject into dView
+   if exists (dView) then return dView
+   
+   put the display_View of tObject into displayView
+   if exists (displayView) then return displayView
+   
+   put the card_Object of tObject into cObject
+   return cObject
+end dv_MetadataObject
+
+
 --> DataView
 -
 command dv_AddMarkdownTitle @dData, someTitle, pLevel
@@ -175,7 +380,11 @@ command dv_AddMarkdownTitle @dData, someTitle, pLevel
    if pLevel is empty then put 1 into pLevel
    put text_RepeatString ("#", pLevel) && someTitle into someMarkdown
    --
-   dv_AddMarkdown dData, someMarkdown
+   -- dv_AddMarkdown dData, someMarkdown
+   put dv_ConstructItem (someMarkdown, "markdown") into itemArray
+   put pLevel into itemArray ["level"]
+   dv_AddItemArray itemArray, dData
+   --
    put the result into insertedIndexNum
    return insertedIndexNum
 end dv_AddMarkdownTitle
@@ -208,37 +417,6 @@ function dv_ConstructItem someText, itemType, pID
    put pID into itemArray ["id"]
    return itemArray
 end dv_ConstructItem
-
-command dv_CreateModule moduleName, pDisplayView, pProjectName
-   -- defaults to creating a modulee in the "lcw_Forms" project
-   
-   put view_GetTemplateObject (moduleName) into rowTemplate
-   if exists (rowTemplate) then
-      lcw_AnswerWarning  "A view or module called '[[moduleName]]' already exists!", pDisplayView, moduleName
-   end if
-   --
-   if pProjectName is empty then
-      put "lcw_Forms" into pProjectName
-      -- put "lcw_Wiki" into pProjectName
-   end if
-   put module_ConstructFolder (moduleName, pProjectName) into moduleFolder
-   if there is a folder moduleFolder is false then
-      return "Error, theree is not folder for the module:" && pProjectName
-   end if
-   --
-   module_Create moduleFolder, moduleName
-   put the result into resultArray
-   --
-   go to stack moduleName
-   save stack moduleName
-   display_ModuleTools moduleName, true
-   --
-   return resultArray
-   --
-   put resultArray ["moduleHomeStackPath"] into moduleHomeStackPath
-   put resultArray ["moduleBehaviorStackPath"] into moduleBehaviorStackPath
-   put resultArray ["moduleControllerStackPath"] into moduleControllerStackPath
-end dv_CreateModule
 
 function dv_FetchWikiStoryData wikiDomain, pSlug, pStyleNames
    put pageArray_Fetch (wikiDomain, pSlug) into pageArray
@@ -280,36 +458,3 @@ private function _CardDvControls cardObject
    delete char -1 of dvControls
    return dvControls
 end _CardDvControls
-
-
---> Deps
--
-command indexedArray_Add @indexedData, itemArray, insertNum
-   put item 2 of the extents of indexedData into maxNum
-   
-   -- move all items (rows) from insertNum onwards one-up
-   repeat with itemNum = maxNum down to rowNum
-      get indexedData [itemNum] 
-      put itemNum + 1 into oneAfter
-      put it into indexedData [oneAfter]
-   end repeat
-   
-   -- insert itemArray into row insertNum (overwriting duplicated old row)
-   put itemArray into indexedData [insertNum]
-end indexedArray_Add
-
-command indexedArray_Delete @indexedData, rowRow
-   put item 2 of the extents of indexedData into maxNum
-   put indexedData [rowRow] into rowDataToMove
-   
-   -- first lets delete and re-number
-   put rowRow + 1 into startDeleteNum
-   repeat with itemNum = startDeleteNum to maxNum
-      get indexedData [itemNum]
-      put itemNum - 1 into oneBefore
-      put it into indexedData [oneBefore]
-   end repeat
-   delete variable indexedData [maxNum]
-   --
-   return rowDataToMove
-end indexedArray_Delete

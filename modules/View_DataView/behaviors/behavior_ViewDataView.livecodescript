@@ -12,186 +12,11 @@ local LocalArray
 
 --> Working on
 -
-
---> DataView | Row
--
-getprop row_Type
-   put the row_Value ["@style"] of the target into rowType
-   return rowType
-end row_Type
-
-setprop row_Type rowType
-   put the dvRowControl of the target into rowView
-   if exists (rowView) is false then return empty
-   --
-   put the dvRow of rowView into rowNum
-   
-   put the dvData of me into dData
-   put rowType into dData [rowNum]["@style"]
-   set the dvData of me to dData
-   --
-   return dData
-end row_Type
-
-
---> Row
--
-getprop row_Data
-   put the dvRowControl of the target into rowView
-   if exists (rowView) is false then return empty
-   put the dvRow of rowView into rowNum
-   --
-   put the dvRowData [rowNum] of rowView into rowData
-   return rowData
-end row_Data
-
-setprop row_Data [rowType] rowData
-   put the dvRowControl of the target into rowView
-   if exists (rowView) is false then return empty
-   put the dvRow of rowView into rowNum
-   --
-   if rowType is not empty then put rowType into rowData ["@style"]
-   --
-   put the dvData of me into dData
-   put rowData into dData [rowNum]
-   set the dvData of me to dData
-   --
-   return dvData
-end row_Data
-
-getprop row_Value [someKey]
-   put the row_Data of the target into rowData
-   return rowData [someKey]
-end row_Value
-
-setprop row_Value [someKey] someValue
-   put the dvRowControl of the target into rowView
-   if exists (rowView) is false then return empty
-   --
-   put the dvData of rowView into dData
-   put the dvRow of rowView into rowNum
-   --
-   put someValue into dData [rowNum][someKey]
-   set the dvData of rowView to dData
-   --
-   return dData
-end row_Value
-
-
---> DataView
--
-getprop dv_CanDrag
-   return LocalArray ["dvCanDrag"] is true
-end dv_CanDrag
-
-setprop dv_CanDrag someBoolean
-   put someBoolean into LocalArray ["dvCanDrag"]
-end dv_CanDrag
-
-setprop dv_MoveRowNum [startedRow] droppedOnRow
-   _MoveRow startedRow, droppedOnRow
-   put the result into rowNum
-   return rowNum
-end dv_MoveRowNum
-
-getprop dv_RowTemplateName [rowStyleName]
-   put the dv_RowTemplate [rowStyleName] of the target into templateObject
-   if exists (templateObject) is falsee then return templateObject
-   
-   put the vieew_Name of templateObject into viewName
-   return viewName
-end dv_RowTemplateName
-
-setprop dv_RowTemplateName [rowStyleName] viewName
-   put view_GetTemplateObject (viewName) into templateObject
-   set the dv_RowTemplate [rowStyleName] of the target to templateObject
-   return the result
-end dv_RowTemplateName
-
-getprop dv_RowTemplate [rowStyleName]
-   put the dvControl of the target into dView
-   if exists (dView) is false then return empty
-   --
-   put the viewProp ["row style templates"] of dView into dvRowStyleArray
-   put dvRowStyleArray [rowStyleName] into templateObject
-   return templateObject
-end dv_RowTemplate
-
-setprop dv_RowTemplate [rowStyleName] templateObject
-   put the dvControl of the target into dView
-   if exists (dView) is false then return "error, not a DataView"
-   --
-   if exists (templateObject) is false then
-      return "error, rowTemplate does not exist"
-   else
-      put revRuggedId (templateObject) into templateObject
-   end if
-   --
-   put the viewProp ["row style templates"] of dView into dvRowStyleArray
-   put templateObject into dvRowStyleArray [rowStyleName]
-   set the viewProp ["row style templates"] of dView to dvRowStyleArray
-   
-   -- make sure it si in the stackfile
-   set the stackFile_LinkObject of dView to templateObject
-   --
-   return dvRowStyleArray
-end dv_RowTemplate
-
-getprop dv_RowBehavior [rowNum]
-   if rowNum is empty then put the dvClickRow of target into rowNum
-   
-   put the dvRowData [rowNum] of the target into rowData
-   --
-   put rowData ["@style"] into rowStyle
-   put the dv_RowStyleArray of target into rowStyleArray
-   put rowStyleArray [rowStyle] into rowBehavior
-   return rowBehavior
-end dv_RowBehavior
-
-getprop dv_RowStyleNames
-   put the dv_RowStyleArray of the target into dvRowStyleArray
-   put keys (dvRowStyleArray) into styleNames
-   return styleNames
-end dv_RowStyleNames
-
-getprop dv_RowStyleArray
-   put the dvControl of the target into dView
-   if exists (dView) is false then return empty
-   --
-   put the viewProp ["row style templates"] of dView into dvRowStyleArray
-   return dvRowStyleArray
-end dv_RowStyleArray
-
-setprop dv_RowStyleArray [rowName] someValue
-   put the dvControl of the target into dView
-   if exists (dView) is false then return empty
-   --
-   switch
-      case rowName is empty and someValue is an array
-         set the viewProp ["row style templates"] of dView to dvRowStyleArray
-         break
-      case rowName is not empty and someValue is not an array
-         set the dv_RowTemplate [rowName] of dView to someValue
-         break
-      default
-         breakpoint
-   end switch
-end dv_RowStyleArray
-
-
---> Geometry
--
-/*
-This DataView already has geometry handers triggered by "resizeControl" => "ResizeToFit" in the "DataView Behavior" stack script.
-To make it compatible with LCW Layouts we add the follwoing handlers.
-*/
-
-on LayoutControl pControlRect
-   -- not a good idea as nesting can causee issues. let's dop a check
-   if the long id of the target is not the long id of me then pass LayoutControl
-   
-   ResizeToFit
-end LayoutControl
+command dv_ShowHtml
+   put mergMarkdownToXHTML (itemText,,true) into someHTML
+   dv_TidyHTML someHTML
+   put someHTML
+end dv_ShowHtml
 
 
 --> Events
@@ -207,16 +32,18 @@ on mouseDown pButton
 end mouseDown
 
 on mouseDoubleUp
+   if the optionKey is "Down" then breakpoint
+   
+   put the dvRowControl of the target into rowView
    put the row_Data of the target into rowData
    put rowData ["text"] into itemText
-   -- put the row_Value ["text"] of the target into itemText
    
    put rowData ["@style"] into itemStyle
    switch itemStyle
+      case "clause"
       case "markdown"
-         put mergMarkdownToXHTML (itemText,,true) into someHTML
-         dv_TidyHTML someHTML
-         put someHTML
+         lexon_Transfer rowView
+         -- dv_ShowHtml
          break
       default
          put itemStyle & CR & itemText
@@ -232,7 +59,23 @@ end mouseDoubleUp
 on preOpenControl
    dispatch "ResetView" to me
    dispatch "RenderView" to me
+   set the behavior_Objects of me to the behavior_Objects of me -- no idea why this is needed?
 end preOpenControl
+
+
+--> Geometry
+-
+/*
+This DataView already has geometry handers triggered by "resizeControl" => "ResizeToFit" in the "DataView Behavior" stack script.
+To make it compatible with LCW Layouts we add the follwoing handlers.
+*/
+
+on LayoutControl pControlRect
+   -- not a good idea as nesting can causee issues. let's dop a check
+   if the long id of the target is not the long id of me then pass LayoutControl
+   
+   ResizeToFit
+end LayoutControl
 
 
 --> DataView | Row | Dragging
@@ -448,6 +291,23 @@ on dragEnter
       set the dragAction to "Link"
    end if
 end dragEnter
+
+
+--> DataView | Drag | Can
+-
+getprop dv_CanDrag
+   return LocalArray ["dvCanDrag"] is true
+end dv_CanDrag
+
+setprop dv_CanDrag someBoolean
+   put someBoolean into LocalArray ["dvCanDrag"]
+end dv_CanDrag
+
+setprop dv_MoveRowNum [startedRow] droppedOnRow
+   _MoveRow startedRow, droppedOnRow
+   put the result into rowNum
+   return rowNum
+end dv_MoveRowNum
 
 
 --> Private

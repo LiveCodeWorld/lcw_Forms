@@ -77,6 +77,19 @@ getprop disabled_CreateRowModule [dView]
    end if
 end disabled_CreateRowModule
 
+getprop SetTemplateForThisStyle_Param [rowView]
+   put the dv_RowStyle of rowView into styleName
+   put the dv_RowTemplateName [styleName] of rowView into moduleName
+   return moduleName
+end SetTemplateForThisStyle_Param
+
+getprop SetTemplateForThisStyle_Params
+   -- quick hack
+   put the openStacks into stackNames
+   filter stackNames with "View|*"
+   return stackNames
+end SetTemplateForThisStyle_Params
+
 
 --> Global | DataView | Row | Menu
 -
@@ -103,13 +116,39 @@ end submenu_RowMenu
 on _
 end _
 
+getprop checked_ShowIcon [rowView]
+   put the icon_isVisible of rowView into isShowing
+   return isShowing
+end checked_ShowIcon
+   
+on menu_ShowIcon rowView
+   put the icon_isVisible of rowView into isShowing
+   set the icon_isVisible of rowView to (isShowing is false)
+end menu_ShowIcon
+
+on _
+end _
+
+on menu_DisplayLinkTypeArray rowView
+   put the dv_RowData of rowView into rowData
+   put the dvData of rowView into cTitleArray
+   --
+   put lexon_GetLinkTypeArray (rowData, cTitleArray, dTitleArray) into linkTypeArray
+   --
+   put rowData ["title"] into sTitle
+   display_Array linkTypeArray, sTitle, "LinkTypeArray"
+end menu_DisplayLinkTypeArray
+
+on _
+end _
+
 on menu_CreateRowModule rowView
    put LocalArray ["displayView"] into displayView
    put _ClickedLinkedModuleName (rowView) into moduleName
    --
    put lcw_Ask ("Do you want to create a new module for this row?", moduleName, displayView) into moduleName
    --
-   dv_CreateModule moduleName, displayView
+   module_CreateWithObject moduleName, "lcw_Forms",  "", displayView
 end menu_CreateRowModule
 
 on menu_GoToRowTemplate rowView
@@ -119,7 +158,7 @@ on menu_GoToRowTemplate rowView
       lcw_AnswerWarning "This row object is not a view!"
       --
       edit the script of rowView
-      object_Inspect rowView
+      display_ObjectProperties rowView
    else
       put view_GetTemplateObject (viewName) into templateObject
       object_GoTo templateObject
@@ -127,7 +166,7 @@ on menu_GoToRowTemplate rowView
 end menu_GoToRowTemplate
 
 on menu_RowProperties rowView
-   object_Inspect rowView
+   display_ObjectProperties rowView
 end menu_RowProperties
 
 on _
@@ -169,6 +208,23 @@ end menu_DisplayRowCardObject
 on _
 end _
 
+on menu_SetRowStyle rowView, styleName
+   
+end menu_SetRowStyle
+
+on menu_SetTemplateForThisStyle rowView, moduleName
+   put the dv_RowStyle of rowView into styleName
+   set the dv_RowTemplateName [styleName] of rowView to moduleName
+end menu_SetTemplateForThisStyle
+
+on menu_RenameStyle rowView
+   breakpoint
+   put lcw_Ask ("What style would you like to associate the template with?", "clause", dView) into styleName
+end menu_RenameStyle
+
+on _
+end _
+
 on submenu_Dev
    return "Dev | Menu"
 end submenu_Dev
@@ -176,6 +232,15 @@ end submenu_Dev
 
 --> Dev | Menu
 -
+on menu_LexonContract
+   put LocalArray ["tObject"] into tObject -- in case there are no rows
+   put the dvControl of tObject into dView
+   --
+   put lexon_FetchDataViewArray ("HyQ8s2di_") into dData
+   set the dvData of dView to dData
+end menu_LexonContract
+
+
 on menu_RowName rowView
    put the name of rowView
 end menu_RowName

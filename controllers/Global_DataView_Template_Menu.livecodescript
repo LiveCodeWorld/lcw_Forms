@@ -23,7 +23,7 @@ on menu_Init tObject
    put displayView into LocalArray ["displayView"]
    --
    if exists (displayView) then
-      put the displayed_Object of tObject into dView
+      put the displayed_Object of displayView into dView
       put the dvControl of dView into dView
    else
       put the dvControl of tObject into dView
@@ -48,7 +48,7 @@ private command _LoadRowStyleNames dView
 end _LoadRowStyleNames
 
 getprop disabled_ShowRowStack [dView]
-   put the dv_LinkedRowStack of dView into stackName
+   put the stack_Name of dView into stackName
    if exists (stack stackName) then
       return false
    else
@@ -69,12 +69,12 @@ getprop rowTemplateBehavior_Params [dView]
 end rowTemplateBehavior_Params
 
 getprop setRowStack_Param [dView]
-   put the dv_LinkedRowStack of dView into stackName
+   put the stack_Name of dView into stackName
    return stackName
 end setRowStack_Param
 
 getprop setRowStack_Params [dView]
-   put the dv_LinkedRowStack of dView into stackNames
+   put the stack_Name of dView into stackNames
    if stackNames is empty then return "Open stack..."
    
    put CR & "-,Open stack..." after stackNames
@@ -98,15 +98,54 @@ private function project_ConstructViewName projectName, pLastBit
    return guessName
 end project_ConstructViewName
 
+-- getprop importRowTemplateArray_Params
+return dv_ListRowViewTemplates()
+end importRowTemplateArray_Params
+
+getprop createNewStyle_Params
+   -- quick hack
+   put the openStacks into stackNames
+   filter stackNames with "View|*"
+   return stackNames
+end createNewStyle_Params
+
 
 --> Global | DataView | Template | Menu
 -
-on menu_DisplayRowTemplateArray dView
-   put the short name of dView into sTitle
+on menu_DisplayRowStyleArray dView
+   display_DvRowStyleArray dView
+end menu_DisplayRowStyleArray
+
+on menu_AddRowTemplateStackfiles dView
    put the dv_RowStyleArray of dView into styleArray
+   repeat for each key styleName in styleArray
+      set the cursor to busy
+      put styleArray [styleName] into rowView
+      if exists (rowView) is false then
+         put rowView into badStyleArray [styleName]
+         next repeat
+      end if
+      --
+      put the stack_Name of rowView into stackName
+      set the stackFile_Link of dView to stackName
+   end repeat
    --
-   display_Data styleArray, sTitle, "Row Style Array"
-end menu_DisplayRowTemplateArray
+   if badStyleArray is an array then
+      display_Data badStyleArray, "Can'f Find", "Bad Style Data"
+   else
+      lcw_AnswerWarning "Added all rows to stackfiles!"
+   end if
+end menu_AddRowTemplateStackfiles
+
+on menu_ExportMenusAndStackFiles dView
+   put the module_Folder of dView into moduleFolder
+   --
+   project_ExportMenusAndStackFiles moduleFolder
+   put the result into projectArray
+   --
+   put the view_Name of dView into moduleName
+   display_Data projectArray, moduleName, "Module Array"  
+end menu_ExportMenusAndStackFiles
 
 on _
 end _
@@ -143,20 +182,14 @@ end menu_RelinkRowTemplate
 on _
 end _
 
-getprop createNewStyle_Params
-   -- quick hack
-   put the openStacks into stackNames
-   filter stackNames with "View|*"
-   return stackNames
-end createNewStyle_Params
-   
 on menu_CreateNewStyle dView, moduleName
    set the itemdelimiter to "|"
-   put item -1 of moduleName into guessNamme
-   --
-   put lcw_Ask ("What style would you like to associate the template with?", "clause", dView) into styleName
+   put tolower (item -1 of moduleName) into guessNamme
+   put lcw_Ask ("What style would you like to associate the template with?", guessNamme, dView) into styleName
    --
    set the dv_RowTemplateName [styleName] of dView to moduleName
+   --
+   display_DvRowStyleArray dView
 end menu_CreateNewStyle
 
 on menu_CreateNewTemplate dView, projectName
@@ -166,7 +199,7 @@ on menu_CreateNewTemplate dView, projectName
    --
    put lcw_Ask ("Great - now what name do you want for the new linked module?", guessName, dView) into moduleName
    --
-   dv_CreateModule moduleName, dView, projectName
+   module_CreateWithObject moduleName, projectName, "", dView
    put the result into resultArray
    -- 
    put resultArray ["moduleHomeStackPath"] into moduleHomeStackPath
@@ -176,51 +209,6 @@ on menu_CreateNewTemplate dView, projectName
    -- set the dv_RowTemplate [styleName] of dView to templateObject -- can;t do that until the module is created
    set the stackFile_Name of dView to moduleName
 end menu_CreateNewTemplate
-
-on menu_AddRowTemplateStackfiles dView
-   put the dv_RowStyleArray of dView into styleArray
-   repeat for each key styleName in styleArray
-      set the cursor to busy
-      put styleArray [styleName] into rowView
-      if exists (rowView) is false then
-         put rowView into badStyleArray [styleName]
-         next repeat
-      end if
-      --
-      put the stack_Name of rowView into stackName
-      set the stackFile_Link of dView to stackName
-   end repeat
-   --
-   if badStyleArray is an array then
-      display_Data badStyleArray, "Can'f Find", "Bad Style Data"
-   else
-      lcw_AnswerWarning "Added all rows to stackfiles!"
-   end if
-end menu_AddRowTemplateStackfiles
-
-on _
-end _
-
-on menu_ShowRowStack dView
-   put the dv_LinkedRowStack of dView into stackName
-   go to stack stackName
-end menu_ShowRowStack
-
-on menu_SetRowStack dView, stackName
-   if stackName = "Open stack..." then
-      answer file "Choose a stack..." with type "LiveCode Stacks|rev|RSTK"
-      put it into stackPath
-      if stackPath is empty then exit to top
-      --
-      set the dv_LinkedRowStack of dView to stackPath
-   else
-      set the dv_LinkedRowStack of dView to stackName
-      set the stackFile_Link of dView to stackName
-   end if
-end menu_SetRowStack
-
-on _
-end _
 
 on _
 end _
@@ -232,3 +220,35 @@ end submenu_Dev
 
 --> Dev | Menu
 -
+-- on menu_AddRowToStyleArray dView, stackName
+   put the dvRowControl of control 1 of stack stackName into rowViewToImport
+   --
+   put the dv_RowStyleArray of dView into styleArray
+   union styleArray with importStyleArray
+   set the dv_RowStyleArray of dView to styleArray
+   --
+   display_Data styleArray, the short name of dView, "Row Style Array"
+end menu_AddRowToStyleArray
+
+on _
+end _
+
+on menu_ShowLinkedRowStack dView
+   breakpoint
+   put the dv_LinkedRowStack of dView into stackName
+   go to stack stackName
+end menu_ShowLinkedRowStack
+
+on menu_SetLinkedRowStack dView, stackName
+   breakpoint
+   if stackName = "Open stack..." then
+      answer file "Choose a stack..." with type "LiveCode Stacks|rev|RSTK"
+      put it into stackPath
+      if stackPath is empty then exit to top
+      --
+      set the dv_LinkedRowStack of dView to stackPath
+   else
+      set the dv_LinkedRowStack of dView to stackName
+      set the stackFile_Link of dView to stackName
+   end if
+end menu_SetLinkedRowStack

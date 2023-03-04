@@ -32,15 +32,22 @@ on menu_Init tObject
    put tObject into LocalArray ["tObject"]
 end menu_Init
 
--- getprop menu_Target [tObject]
-put the dv_LinkedDataView of tObject into dView
-put dView into LocalArray ["dView"]
-return dView
+getprop menu_Target [tObject]   
+   put the dv_LinkedDataView of tObject into dView
+   put dView into LocalArray ["dView"]
+   return dView
 end menu_Target
 
--- getprop menu_CheckTarget [dView]
-return exists (dView)
-end menu_CheckTarget
+getprop editDataViewBehavior_Params [dView]
+   put the behavior_StackNames of dView into bStackNames
+   return bStackNames
+end editDataViewBehavior_Params
+
+getprop checked_StackIsKnown [dView]
+   put the stack_IsKnown of dView into isKnown
+   return isKnown
+end checked_StackIsKnown
+
 
 
 --> Global | DataView | Behaviors | Menu
@@ -99,16 +106,6 @@ getprop dataviewScripts_Params
    filter sNames with "*DataView*"
    return sNames
 end dataviewScripts_Params
-
-getprop editDataViewBehavior_Params [dView]
-   put the behavior_StackNames of dView into bStackNames
-   return bStackNames
-end editDataViewBehavior_Params
-
-getprop checked_StackIsKnown [dView]
-   put the stack_IsKnown of dView into isKnown
-   return isKnown
-end checked_StackIsKnown
 
 
 --> Dev | Menu
