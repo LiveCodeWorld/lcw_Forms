@@ -11,6 +11,95 @@ version: 0.1
 A basic form element.
 */
 
+--> Working on
+-
+on LayoutControl pRect
+   -- Warning:  only works if the lockloc of the group is true!
+   
+   put the long id of me into formView
+   if pRect is empty then put the rect of me into pRect
+   
+   lock screen
+   
+   put the form_VerticalSpacing of me into formVerticalSpacing
+   put the record_DefaultHeight of me into recordDefaultHeight
+   
+   put the form_Margins of me into someMargin
+   if the view_ResizeToContents of me is true then put the view_FormattedRect [pRect] of me into pRect
+   put the box_Rect [pRect] of me into boxRect
+   put rect_SubtractMargin (someMargin, boxRect) into innerRect
+   
+   if word 1 of formView is not "card" then
+      if the vscrollbar of me is true then
+         put the scrollbarwidth of me into scrollBarMargin
+      end if
+      if the auto_Scroll of me is true then
+         put the formatted_Height of me into fHeight
+         put item 4 of pRect - item 2 of pRect into actualHeight
+         if fHeight > actualHeight then
+            set the vScrollbar of me to true
+         else
+            set the vScrollbar of me to false
+         end if
+      end if
+   end if
+   
+   put item 2 of innerRect into viewTop
+   put the form_Records of me into formRecords
+   put item 1 of formVerticalSpacing into lastVerticalSpacing
+   repeat with recordNum = 1 to the number of lines of formRecords
+      put line recordNum of formRecords into recordView
+      put item recordNum of formVerticalSpacing into verticalSpacing
+      if verticalSpacing is empty then put lastVerticalSpacing into verticalSpacing
+      put verticalSpacing into lastVerticalSpacing
+      
+      if the visible of recordView is false then next repeat
+      put innerRect into viewRect
+      put viewTop into item 2 of viewRect
+      
+      put the record_Height of recordView into recordHeight
+      if recordHeight is empty then put height of recordView into recordHeight
+      put viewTop + recordHeight into item 4 of viewRect
+      
+      -- set the rect_Mask [viewRect] of recordView to "yellow"
+      -- dispatch "LayoutControl" to recordView with viewRect -- need to do this twice to precalculate record_Height!
+      set the rect of recordView to viewRect
+      
+      get the record_Height of recordView
+      if it is empty then get the height of recordView
+      if it is not recordHeight then
+         put it into recordHeight
+         -- if recordHeight is empty then put recordDefaultHeight into recordHeight
+         add recordHeight + verticalSpacing to fHeight
+         
+         put viewTop + recordHeight into viewBottom
+         put viewBottom into item 4 of viewRect
+         
+         -- set the view_Rect of recordView to viewRect
+         -- set the rect of recordView to viewRect - will not work for controls
+         -- dispatch "LayoutControl" to recordView with viewRect
+         set the rect of recordView to viewRect
+         -- set the rect_Mask of recordView to red
+      end if
+      
+      -- as the record_Height may have been changed - let's recalculate.
+      put viewTop + the height of recordView+ verticalSpacing into viewTop
+      -- put viewBottom + verticalSpacing into viewTop
+   end repeat
+   
+   if word 1 of formView is not "card" then
+      -- if the showName of me is true then
+      -- needed if title is showing as title moves things around
+      -- but seems to muck up normal geometry?
+      set the rect of me to pRect
+      -- end if
+   end if
+   unlock screen
+end LayoutControl
+
+
+--> Objects
+-
 getprop form_View
    put the long id of me into layoutView
    if not(the long id of target contains layoutView) then exit to top
@@ -25,19 +114,6 @@ end form_Model
 getprop view_Object
    return the long id of me
 end view_Object
-
-
---> Menu | Props
--
-/*
-This can be overidden with a menu_Target handler on the  menu_GetTopController() script (ie the card).
-Check the "menu_TargetFromGlobal" handler of stack libOPN_Menus
-*/
-
-getprop menu_Target
-   put menu_GetTargetObject() into mTarget
-   return mTarget
-end menu_Target
 
 
 --> Events
@@ -383,98 +459,6 @@ getprop inner_Rect [pRect]
    -- set the rect_Mask [innerRect] of me to "yellow"
    return innerRect
 end inner_Rect
-
-on LayoutControl pRect
-   -- warning:  only works if the lockloc of the group is true!
-   
-   put the long id of me into formView
-   -- if formView is not the long id of the target then return false -- pass LayoutControl
-   if pRect is empty then put the rect of me into pRect
-   
-   lock screen
-   
-   put the form_VerticalSpacing of me into formVerticalSpacing
-   put the record_DefaultHeight of me into recordDefaultHeight
-   
-   put the form_Margins of me into someMargin
-   if the view_ResizeToContents of me is true then put the view_FormattedRect [pRect] of me into pRect
-   put the box_Rect [pRect] of me into boxRect
-   put rect_SubtractMargin (someMargin, boxRect) into innerRect
-   
-   if word 1 of formView is not "card" then
-      if the vscrollbar of me is true then
-         put the scrollbarwidth of me into scrollBarMargin
-      end if
-      if the auto_Scroll of me is true then
-         put the formatted_Height of me into fHeight
-         put item 4 of pRect - item 2 of pRect into actualHeight
-         if fHeight > actualHeight then
-            set the vScrollbar of me to true
-         else
-            set the vScrollbar of me to false
-         end if
-      end if
-   end if
-   
-   -- set the rect_Mask [pRect] of me to "yellow"
-   -- set the rect_Mask [innerRect] of me to "red"
-   
-   put item 2 of innerRect into viewTop
-   put the form_Records of me into formRecords
-   put item 1 of formVerticalSpacing into lastVerticalSpacing
-   repeat with recordNum = 1 to the number of lines of formRecords
-      put line recordNum of formRecords into recordView
-      put item recordNum of formVerticalSpacing into verticalSpacing
-      if verticalSpacing is empty then put lastVerticalSpacing into verticalSpacing
-      put verticalSpacing into lastVerticalSpacing
-      
-      if the visible of recordView is false then next repeat
-      put innerRect into viewRect
-      put viewTop into item 2 of viewRect
-      
-      put the record_Height of recordView into recordHeight
-      if recordHeight is empty then put height of recordView into recordHeight
-      put viewTop + recordHeight into item 4 of viewRect
-      
-      -- set the rect_Mask [viewRect] of recordView to "yellow"
-      -- dispatch "LayoutControl" to recordView with viewRect -- need to do this twice to precalculate record_Height!
-      set the rect of recordView to viewRect
-      
-      get the record_Height of recordView
-      if it is empty then get the height of recordView
-      if it is not recordHeight then
-         put it into recordHeight
-         -- if recordHeight is empty then put recordDefaultHeight into recordHeight
-         add recordHeight + verticalSpacing to fHeight
-         
-         put viewTop + recordHeight into viewBottom
-         put viewBottom into item 4 of viewRect
-         
-         -- set the view_Rect of recordView to viewRect
-         -- set the rect of recordView to viewRect - will not work for controls
-         -- dispatch "LayoutControl" to recordView with viewRect
-         set the rect of recordView to viewRect
-         -- set the rect_Mask of recordView to red
-      end if
-      
-      -- as the record_Height may have been changed - let's recalculate.
-      put viewTop + the height of recordView+ verticalSpacing into viewTop
-      -- put viewBottom + verticalSpacing into viewTop
-   end repeat
-   
-   if word 1 of formView is not "card" then
-      if the showName of me is true then
-         -- needed if title is showing as title moves things around
-         -- but seems to muck up normal geometry?
-         set the rect of me to pRect
-      end if
-   end if
-   unlock screen
-   
-   -- set the uOPN ["inner_Rect"] of me to innerRect
-   
-   -- set the rect_Mask [pRect] of me to "blue"
-end LayoutControl
 
 getprop record_DefaultHeight
    return 24

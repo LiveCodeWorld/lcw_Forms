@@ -109,6 +109,12 @@ getprop openStackfile_Params [dView]
    return stackNames
 end openStackfile_Params
 
+getprop checked_DataViewPalette [dView]
+   put the view_Name of dView into viewName
+   put display_FindView ("DataView", viewName) into displayView
+   return exists (displayView)
+end checked_DataViewPalette
+
 
 --> Global | DataView | Menu
 -
@@ -116,17 +122,11 @@ on menu_ObjectInspector dView, stackName
    object_Inspect dView
 end menu_ObjectInspector
 
-getprop checked_DataViewPalette [dView]
-   put the view_Name of dView into viewName
-   put display_FindView ("DataView", viewName) into displayView
-   return exists (displayView)
-end checked_DataViewPalette
-
 on menu_DataViewPalette dView
    display_DataView dView, "click"
 end menu_DataViewPalette
 
-on _
+private command _
 end _
 
 on submenu_ImportData
@@ -145,8 +145,8 @@ on menu_RefreshDataView dView
    set the behavior_Objects of dView to the behavior_Objects of dView -- no idea why
 end menu_RefreshDataView
 
-on _
-end _
+private command __
+end __
 
 on submenu_Templates
    return "Global | DataView | Template | Menu"
@@ -156,8 +156,8 @@ on submenu_Behaviors
    return "Global | DataView | Behaviors | Menu"
 end submenu_Behaviors
 
-on _
-end _
+private command ___
+end ___
 
 on menu_OpenStackfile dView, stackName
    put the dv_LinkedRowStack of dView into stackName
@@ -171,8 +171,8 @@ on menu_DisplayStackFileArray dView
    display_Data stackFileArray, "Stackfile Array", sTitle
 end menu_DisplayStackFileArray
 
-on _
-end _
+private command ____
+end ____
 
 on menu_SetLinkedDataView dView
    put the selectedObject into someContainer
@@ -204,15 +204,11 @@ on menu_Deselect
    select empty
 end menu_Deselect
 
-on menu_Documentation
-   launch url "afd"
-end menu_Documentation
-
-on _
-end _
+private command _____
+end _____
 
 on menu_Documentation
-   launch url "asdf"
+   launch url "https://github.com/trevordevore/levurehelper-dataview"
 end menu_Documentation
 
 on submenu_Dev
