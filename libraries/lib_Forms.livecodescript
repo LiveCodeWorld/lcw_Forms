@@ -33,6 +33,9 @@ end display_DataView
 
 --> Forms
 -
+getprop test_Name
+   return "David Bovill"
+end test_Name
 
 
 --> Private
